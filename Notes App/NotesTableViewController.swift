@@ -17,6 +17,8 @@ class NotesTableViewController: UITableViewController {
         super.viewDidLoad()
         
         navigationItem.leftBarButtonItem = editButtonItem
+        
+        loadNotes()
     }
 
     //MARK: - Table view data source methods
@@ -35,12 +37,14 @@ class NotesTableViewController: UITableViewController {
         if editingStyle == .delete {
             notes.remove(at: indexPath.row)
             tableView.deleteRows(at: [indexPath], with: .automatic)
+            saveNotes()
         }
     }
     
     override func tableView(_ tableView: UITableView, moveRowAt sourceIndexPath: IndexPath, to destinationIndexPath: IndexPath) {
         let movedNote = notes.remove(at: sourceIndexPath.row)
         notes.insert(movedNote, at: destinationIndexPath.row)
+        saveNotes()
     }
     
     //MARK: - Segues and delegate
@@ -64,5 +68,39 @@ class NotesTableViewController: UITableViewController {
             notes.append(note)
             tableView.insertRows(at: [IndexPath(row: notes.count - 1, section: 0)], with: .automatic)
         }
+        
+        saveNotes()
+    }
+    
+    //MARK: - Data storage and retrieval
+    func loadNotes() {
+        guard let codedData = try? Data(contentsOf: filePath()) else { return }
+        
+        do {
+            if let encodedNotes = try NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(codedData) as? [String] {
+                notes = encodedNotes
+                tableView.reloadData()
+            }
+        } catch {
+            print(error)
+            print(error.localizedDescription)
+        }
+    }
+    
+    func saveNotes() {
+        do {
+            let codedNotes = try NSKeyedArchiver.archivedData(withRootObject: notes, requiringSecureCoding: false)
+            try codedNotes.write(to: filePath())
+        } catch {
+            let alert = UIAlertController(title: "Could not save notes", message: error.localizedDescription, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+        }
+    }
+    
+    private func filePath() -> URL {
+        let fileManager = FileManager.default
+        let url = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first
+        return url!.appendingPathComponent("Notes")
     }
 }
