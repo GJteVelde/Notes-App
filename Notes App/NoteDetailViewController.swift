@@ -11,7 +11,7 @@ import UIKit
 class NoteDetailViewController: UIViewController {
 
     //MARK: - Objects and Properties
-    var note: String?
+    var note: NSAttributedString?
     weak var delegate: NotesTableViewController!
     
     @IBOutlet weak var noteTextView: UITextView!
@@ -20,12 +20,13 @@ class NoteDetailViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        noteTextView.text = note ?? ""
+        noteTextView.allowsEditingTextAttributes = true
+        noteTextView.attributedText = note ?? NSAttributedString()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
-        delegate.newOrEditedNote(noteTextView.text!)
+        delegate.newOrEditedNote(noteTextView.attributedText!)
     }
 }

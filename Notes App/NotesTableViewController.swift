@@ -11,7 +11,7 @@ import UIKit
 class NotesTableViewController: UITableViewController {
 
     //MARK: - Objects and Properties
-    var notes = [String]()
+    var notes = [NSAttributedString]()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -28,7 +28,7 @@ class NotesTableViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "NoteCell", for: indexPath)
-        cell.textLabel?.text = notes[indexPath.row]
+        cell.textLabel?.text = notes[indexPath.row].string
         return cell
     }
     
@@ -58,8 +58,8 @@ class NotesTableViewController: UITableViewController {
         }
     }
     
-    func newOrEditedNote(_ note: String) {
-        guard note != "" else { return }
+    func newOrEditedNote(_ note: NSAttributedString) {
+        guard note.string != "" else { return }
         
         if let indexPathOfEditedNote = tableView.indexPathForSelectedRow {
             notes[indexPathOfEditedNote.row] = note
@@ -77,7 +77,7 @@ class NotesTableViewController: UITableViewController {
         guard let codedData = try? Data(contentsOf: filePath()) else { return }
         
         do {
-            if let encodedNotes = try NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(codedData) as? [String] {
+            if let encodedNotes = try NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(codedData) as? [NSAttributedString] {
                 notes = encodedNotes
                 tableView.reloadData()
             }
