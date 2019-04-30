@@ -11,7 +11,7 @@ import UIKit
 class NotesTableViewController: UITableViewController {
 
     //MARK: - Objects and Properties
-    var notes = [NSAttributedString]()
+    var notes = [Note]()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -28,7 +28,11 @@ class NotesTableViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "NoteCell", for: indexPath)
-        cell.textLabel?.text = notes[indexPath.row].string
+        
+        let note = notes[indexPath.row]
+        cell.textLabel?.text = note.text.string
+        cell.detailTextLabel?.text = "Last edited: " + returnDateAsString(note.lastEdited)
+        
         return cell
     }
     
@@ -39,12 +43,6 @@ class NotesTableViewController: UITableViewController {
             tableView.deleteRows(at: [indexPath], with: .automatic)
             saveNotes()
         }
-    }
-    
-    override func tableView(_ tableView: UITableView, moveRowAt sourceIndexPath: IndexPath, to destinationIndexPath: IndexPath) {
-        let movedNote = notes.remove(at: sourceIndexPath.row)
-        notes.insert(movedNote, at: destinationIndexPath.row)
-        saveNotes()
     }
     
     //MARK: - Segues and delegate
@@ -58,15 +56,19 @@ class NotesTableViewController: UITableViewController {
         }
     }
     
-    func newOrEditedNote(_ note: NSAttributedString) {
-        guard note.string != "" else { return }
-        
+    func sendNoteToNotesTableVC(_ note: Note) {
         if let indexPathOfEditedNote = tableView.indexPathForSelectedRow {
-            notes[indexPathOfEditedNote.row] = note
-            tableView.reloadRows(at: [indexPathOfEditedNote], with: .automatic)
+            notes.remove(at: indexPathOfEditedNote.row)
+            notes.insert(note, at: 0)
+            
+            tableView.performBatchUpdates({
+                tableView.moveRow(at: indexPathOfEditedNote, to: IndexPath(row: 0, section: 0))
+            }) { [unowned self] (_) in
+                self.tableView.reloadRows(at: [IndexPath(row: 0, section: 0)], with: .automatic)
+            }
         } else {
-            notes.append(note)
-            tableView.insertRows(at: [IndexPath(row: notes.count - 1, section: 0)], with: .automatic)
+            notes.insert(note, at: 0)
+            tableView.insertRows(at: [IndexPath(row: 0, section: 0)], with: .automatic)
         }
         
         saveNotes()
@@ -77,7 +79,7 @@ class NotesTableViewController: UITableViewController {
         guard let codedData = try? Data(contentsOf: filePath()) else { return }
         
         do {
-            if let encodedNotes = try NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(codedData) as? [NSAttributedString] {
+            if let encodedNotes = try NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(codedData) as? [Note] {
                 notes = encodedNotes
                 tableView.reloadData()
             }
@@ -102,5 +104,33 @@ class NotesTableViewController: UITableViewController {
         let fileManager = FileManager.default
         let url = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first
         return url!.appendingPathComponent("Notes")
+    }
+    
+    //MARK: - Helper Methods
+    func returnDateAsString(_ date: Date) -> String {
+        let calendar = Calendar.current
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = NSLocale.current
+        
+        let lastWeekDate = calendar.startOfDay(for: Date()).addingTimeInterval(-6 * 24 * 60 * 60)
+        
+        if calendar.isDateInToday(date) {
+            dateFormatter.dateStyle = .none
+            dateFormatter.timeStyle = .short
+            return dateFormatter.string(from: date)
+        } else if calendar.isDateInYesterday(date) {
+            dateFormatter.dateStyle = .medium
+            dateFormatter.timeStyle = .none
+            dateFormatter.doesRelativeDateFormatting = true
+            return dateFormatter.string(from: date)
+        } else if lastWeekDate < date {
+            dateFormatter.setLocalizedDateFormatFromTemplate("EEEE")
+            return dateFormatter.string(from: date)
+        } else {
+            dateFormatter.dateStyle = .short
+            dateFormatter.timeStyle = .none
+            return dateFormatter.string(from: date)
+        }
     }
 }
