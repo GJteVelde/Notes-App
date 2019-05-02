@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import CloudKit
 
 class NoteDetailViewController: UIViewController, UITextViewDelegate {
 
@@ -36,23 +37,25 @@ class NoteDetailViewController: UIViewController, UITextViewDelegate {
         }
         
         noteTextView.delegate = self
-        noteTextView.allowsEditingTextAttributes = true
-        noteTextView.attributedText = note?.text ?? NSAttributedString()
+        noteTextView.allowsEditingTextAttributes = false
+        noteTextView.text = note?.text ?? ""
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
-        guard noteTextView.attributedText.string != "" else { return }
+        guard noteTextView.text != "" else { return }
         
         if note != nil {
-            guard noteTextView.attributedText != note!.text else { return }
-            
-            note!.text = noteTextView.attributedText
+            guard noteTextView.text != note!.text else { return }
+            note!.text = noteTextView.text
             note!.lastEdited = Date()
             delegate.sendNoteToNotesTableVC(note!)
         } else {
-            let newNote = Note(text: noteTextView.attributedText, lastEdited: Date())
+            let newNote = Note()
+            newNote.recordID = CKRecord.ID(recordName: UUID().uuidString)
+            newNote.text = noteTextView.text
+            newNote.lastEdited = Date()
             delegate.sendNoteToNotesTableVC(newNote)
         }
     }
